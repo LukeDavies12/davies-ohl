@@ -114,10 +114,10 @@ export function NumberStepper({
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 overflow-visible">
       <div
         className={cn(
-          "flex h-7 items-stretch overflow-hidden rounded-md border border-input bg-background focus-within:border-ring focus-within:ring-1 focus-within:ring-ring",
+          "flex h-7 items-stretch rounded-md border border-input bg-background focus-within:border-ring focus-within:ring-1 focus-within:ring-ring",
         )}
       >
         <Button
@@ -127,7 +127,7 @@ export function NumberStepper({
           aria-label="Decrease"
           disabled={currentNumber() <= min}
           onClick={() => commit(currentNumber() - 1)}
-          className="rounded-none"
+          className="rounded-none rounded-l-[5px]"
         >
           −
         </Button>
@@ -156,7 +156,7 @@ export function NumberStepper({
           aria-label="Increase"
           disabled={currentNumber() >= max}
           onClick={() => commit(currentNumber() + 1)}
-          className="rounded-none"
+          className="rounded-none rounded-r-[5px]"
         >
           +
         </Button>

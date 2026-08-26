@@ -163,8 +163,8 @@ function DateField({ label, value, onCommit }: DateFieldProps) {
   }
 
   return (
-    <label className="flex min-w-0 flex-1 items-center gap-1 text-xs">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
+    <label className="flex min-w-0 w-full items-center gap-2 text-xs">
+      <span className="w-9 shrink-0 text-muted-foreground">{label}</span>
       <Input
         type="text"
         inputMode="numeric"
@@ -173,7 +173,7 @@ function DateField({ label, value, onCommit }: DateFieldProps) {
         onFocus={handleFocus}
         onBlur={handleBlur}
         onChange={(event) => setDraft(event.target.value)}
-        className="h-7 w-[7.25rem] shrink-0 rounded-sm px-2 text-xs tabular-nums"
+        className="h-7 min-w-0 flex-1 rounded-sm px-2 text-xs tabular-nums"
       />
     </label>
   );
@@ -223,11 +223,13 @@ export function DateRangePicker({ from, to, onChange }: Props) {
 
       <PopoverContent
         align="start"
+        side="bottom"
         sideOffset={4}
         positionMethod="fixed"
-        className="w-auto max-w-[calc(100vw-2rem)] p-0"
+        collisionAvoidance={{ side: "flip", align: "shift" }}
+        className="w-[min(19.5rem,calc(100vw-2rem))] gap-0 p-0"
       >
-        <div className="flex items-center gap-2 border-b px-2 py-1.5">
+        <div className="flex flex-col gap-2.5 border-b px-2.5 py-2">
           <DateField
             label="From"
             value={draft.from}
@@ -248,6 +250,7 @@ export function DateRangePicker({ from, to, onChange }: Props) {
           defaultMonth={toDate(draft.from) ?? toDate(draft.to)}
           selected={toDateRange(draft)}
           onSelect={(range) => updateDraft(fromDateRange(range))}
+          className="w-full min-w-0 p-2"
         />
 
         <div className="flex justify-end gap-2 border-t px-2 py-1.5">

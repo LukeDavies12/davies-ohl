@@ -25,7 +25,7 @@ export default async function Home({ searchParams }: PageProps<"/">) {
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-5xl px-4 py-4">
-      <div className="flex min-w-0 flex-col gap-2 overflow-x-clip">
+      <div className="flex min-w-0 flex-col gap-2">
         <FilterControls
           filters={filters}
           hasUrlFilters={hasUrlFilters}
