@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { FilterControls } from "@/components/leaderboard/filter-controls";
 import { GamesLogSection } from "@/components/leaderboard/games-log-table";
 import { HighScores } from "@/components/leaderboard/high-scores";
@@ -7,11 +8,26 @@ import { getSession } from "@/lib/auth/session";
 import { getInitialGamesLog } from "@/lib/games-log";
 import { getLogGameOptions } from "@/lib/log-game-options";
 import { getLeaderboardPageData } from "@/lib/leaderboard-page-data";
-import { parseLeaderboardFilters } from "@/lib/leaderboard-filters";
+import {
+  DEFAULT_FILTERS,
+  FILTERS_COOKIE_NAME,
+  hasLeaderboardFilterParams,
+  parseLeaderboardFilters,
+  parseStoredFilters,
+  resolveLeaderboardFilters,
+} from "@/lib/leaderboard-filters";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
-  const filters = parseLeaderboardFilters(params);
+  const hasUrlFilters = hasLeaderboardFilterParams(params);
+  const stored = parseStoredFilters(
+    (await cookies()).get(FILTERS_COOKIE_NAME)?.value,
+  );
+  const filters = hasUrlFilters
+    ? parseLeaderboardFilters(params)
+    : stored
+      ? resolveLeaderboardFilters(stored)
+      : DEFAULT_FILTERS;
   const [session, { rows, highScores }, gamesLog, logGameOptions] =
     await Promise.all([
       getSession(),
@@ -19,9 +35,6 @@ export default async function Home({ searchParams }: PageProps<"/">) {
       getInitialGamesLog({ from: filters.from, to: filters.to }),
       getLogGameOptions(),
     ]);
-  const hasUrlFilters = ["from", "to", "minGames"].some(
-    (key) => params[key] !== undefined,
-  );
 
   return (
     <main className="mx-auto w-full min-w-0 max-w-5xl px-4 py-4">
