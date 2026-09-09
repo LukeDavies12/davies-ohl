@@ -14,11 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { logGameAction, updateGameAction } from "@/lib/actions/log-game";
@@ -189,11 +184,9 @@ function SearchList({
 
 function AutocompletePanel({
   open,
-  side = "bottom",
   children,
 }: {
   open: boolean;
-  side?: "top" | "bottom";
   children: React.ReactNode;
 }) {
   if (!open) {
@@ -201,12 +194,7 @@ function AutocompletePanel({
   }
 
   return (
-    <div
-      className={cn(
-        "absolute left-0 z-50 w-full overflow-hidden rounded-lg bg-popover shadow-md ring-1 ring-foreground/10",
-        side === "top" ? "bottom-full mb-1" : "top-full mt-1",
-      )}
-    >
+    <div className="absolute top-full left-0 z-50 mt-1 w-full overflow-hidden rounded-lg bg-popover shadow-md ring-1 ring-foreground/10">
       {children}
     </div>
   );
@@ -235,6 +223,7 @@ export function LogGameForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const playersTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const dateFieldRef = useRef<HTMLDivElement>(null);
   const skipPlayersKeyUpRef = useRef(false);
   const isEditing = Boolean(game);
 
@@ -366,6 +355,24 @@ export function LogGameForm({
     setLocationHighlight(0);
   }, [game, open, today]);
 
+  useEffect(() => {
+    if (!dateOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        dateFieldRef.current &&
+        !dateFieldRef.current.contains(event.target as Node)
+      ) {
+        setDateOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [dateOpen]);
+
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       resetForm();
@@ -482,12 +489,14 @@ export function LogGameForm({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="flex max-h-[min(100dvh-2rem,640px)] flex-col gap-0 overflow-hidden rounded-sm p-0 sm:max-w-lg"
+        className="top-8! flex max-h-[min(100dvh-2rem,640px)] translate-y-0! flex-col gap-0 overflow-hidden rounded-sm p-0 sm:max-w-lg"
       >
         <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
           <DialogHeader className="shrink-0 border-b px-2.5 py-2">
-            <div className="flex items-center justify-between gap-2">
-              <DialogTitle>{isEditing ? "Update game" : null}</DialogTitle>
+            <div className="flex items-center justify-end gap-2">
+              <DialogTitle className="sr-only">
+                {isEditing ? "Update game" : "Log game"}
+              </DialogTitle>
               <div className="flex shrink-0 items-center gap-0.5">
                 {onSignOut ? (
                   <Button
@@ -522,34 +531,35 @@ export function LogGameForm({
                 <Label htmlFor="game-date" className="text-[12px]">
                   Date
                 </Label>
-                <Popover open={dateOpen} onOpenChange={setDateOpen}>
-                  <PopoverTrigger
-                    render={
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="h-7 w-full justify-start px-2 text-[12px] font-normal"
-                      />
-                    }
+                <div className="relative" ref={dateFieldRef}>
+                  <Button
+                    id="game-date"
+                    type="button"
+                    variant="outline"
+                    aria-expanded={dateOpen}
+                    className="h-7 w-full justify-start px-2 text-[12px] font-normal"
+                    onClick={() => setDateOpen((current) => !current)}
                   >
                     <CalendarIcon className="size-3.5 shrink-0" />
                     <span className="tabular-nums">{formatDisplayDate(date)}</span>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={date ? new Date(`${date}T12:00:00`) : undefined}
-                      onSelect={(nextDate) => {
-                        if (!nextDate) {
-                          return;
-                        }
+                  </Button>
+                  {dateOpen ? (
+                    <div className="absolute top-full left-0 z-50 mt-1 rounded-lg bg-popover p-0 shadow-md ring-1 ring-foreground/10">
+                      <Calendar
+                        mode="single"
+                        selected={date ? new Date(`${date}T12:00:00`) : undefined}
+                        onSelect={(nextDate) => {
+                          if (!nextDate) {
+                            return;
+                          }
 
-                        setDate(toIsoDate(nextDate));
-                        setDateOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
+                          setDate(toIsoDate(nextDate));
+                          setDateOpen(false);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -619,7 +629,8 @@ export function LogGameForm({
                 id="game-message"
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                className="min-h-12 py-1.5 text-[12px]"
+                className="min-h-12 py-1.5 text-[12px] field-sizing-fixed"
+                style={{ fieldSizing: "fixed" }}
               />
             </div>
 
@@ -627,14 +638,7 @@ export function LogGameForm({
               <Label htmlFor="game-players" className="text-[12px]">
                 Players
               </Label>
-              <Popover
-                open={showPlayerAutocomplete}
-                onOpenChange={(nextOpen) => {
-                  if (!nextOpen) {
-                    setPlayerAutocompleteOpen(false);
-                  }
-                }}
-              >
+              <div className="relative">
                 <Textarea
                   ref={playersTextareaRef}
                   id="game-players"
@@ -652,6 +656,7 @@ export function LogGameForm({
                       target.selectionStart ?? target.value.length,
                     );
                   }}
+                  onBlur={() => setPlayerAutocompleteOpen(false)}
                   onKeyUp={(event) => {
                     if (skipPlayersKeyUpRef.current) {
                       skipPlayersKeyUpRef.current = false;
@@ -706,26 +711,13 @@ export function LogGameForm({
                     }
                   }}
                   placeholder="Trent 143 Luke 182 Jake 124"
-                  className="min-h-24 py-1.5 font-mono text-[12px] leading-5"
+                  className="min-h-24 py-1.5 font-mono text-[12px] leading-5 field-sizing-fixed"
+                  style={{ fieldSizing: "fixed" }}
                   autoCapitalize="words"
                   autoCorrect="off"
                   spellCheck={false}
                 />
-                <PopoverContent
-                  anchor={playersTextareaRef}
-                  align="start"
-                  side="bottom"
-                  sideOffset={4}
-                  positionMethod="fixed"
-                  collisionAvoidance={{
-                    side: "flip",
-                    align: "none",
-                    fallbackAxisSide: "none",
-                  }}
-                  initialFocus={false}
-                  finalFocus={false}
-                  className="w-[var(--anchor-width)] p-0"
-                >
+                <AutocompletePanel open={showPlayerAutocomplete}>
                   <SearchList
                     items={playerAutocompleteItems}
                     highlightIndex={playerHighlight}
@@ -733,8 +725,8 @@ export function LogGameForm({
                     onSelect={selectPlayerSuggestion}
                     emptyLabel="No players found"
                   />
-                </PopoverContent>
-              </Popover>
+                </AutocompletePanel>
+              </div>
             </div>
 
             {parsedPreview?.ok && parsedPreview.scores.length > 0 ? (

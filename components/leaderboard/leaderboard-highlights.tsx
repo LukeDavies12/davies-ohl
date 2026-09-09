@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import type { LeaderboardRow } from "@/lib/leaderboard";
+import { CompPercentageHelp } from "@/components/leaderboard/comp-percentage-help";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -45,16 +47,19 @@ function TopChart({
   entries,
   max,
   barClassName,
+  help,
 }: {
   title: string;
   entries: TopEntry[];
   max: number;
   barClassName: string;
+  help?: ReactNode;
 }) {
   return (
     <section className="mb-4">
-      <h2 className="mb-1 text-[11px] font-medium text-muted-foreground">
+      <h2 className="mb-1 flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
         {title}
+        {help}
       </h2>
       {entries.length === 0 ? (
         <p className="text-xs text-muted-foreground">No data</p>
@@ -106,6 +111,7 @@ export function LeaderboardHighlights({ rows }: Props) {
         entries={getTopFive(rows, "competitivenessPercentage")}
         max={metricMax(rows, "competitivenessPercentage")}
         barClassName="bg-neutral-600"
+        help={<CompPercentageHelp />}
       />
     </div>
   );

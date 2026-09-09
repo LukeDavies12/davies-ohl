@@ -638,7 +638,7 @@ export function GamesLogSection({
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete this game?</DialogTitle>
+            <DialogTitle className="text-sm font-medium">Delete this game?</DialogTitle>
             <DialogDescription>
               {deleteGame
                 ? `${formatDate(deleteGame.date)} at ${deleteGame.location}. This cannot be undone.`
