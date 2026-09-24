@@ -22,6 +22,7 @@ function PopoverContent({
   positionMethod = "absolute",
   collisionAvoidance,
   anchor,
+  container,
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
@@ -33,9 +34,10 @@ function PopoverContent({
     | "positionMethod"
     | "collisionAvoidance"
     | "anchor"
-  >) {
+  > &
+  Pick<PopoverPrimitive.Portal.Props, "container">) {
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={container}>
       <PopoverPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}
@@ -44,7 +46,10 @@ function PopoverContent({
         positionMethod={positionMethod}
         collisionAvoidance={collisionAvoidance}
         anchor={anchor}
-        className="isolate z-[100]"
+        className={cn(
+          "isolate z-[100]",
+          positionMethod === "fixed" ? "fixed" : "absolute",
+        )}
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"

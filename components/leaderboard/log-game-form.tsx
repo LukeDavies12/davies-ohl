@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { CalendarIcon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -200,6 +201,117 @@ function AutocompletePanel({
   );
 }
 
+function DatePickerOverlay({
+  open,
+  anchorRef,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  open: boolean;
+  anchorRef: React.RefObject<HTMLElement | null>;
+  selected: Date | undefined;
+  onSelect: (date: Date) => void;
+  onClose: () => void;
+}) {
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(
+    null,
+  );
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+
+    function update() {
+      const anchor = anchorRef.current;
+      if (!anchor) {
+        return;
+      }
+
+      const rect = anchor.getBoundingClientRect();
+      const width = 288;
+      const height = 332;
+      const left = Math.min(
+        Math.max(8, rect.left),
+        window.innerWidth - width - 8,
+      );
+      const below = rect.bottom + 4;
+      const above = rect.top - height - 4;
+      const top =
+        below + height <= window.innerHeight - 8
+          ? below
+          : Math.max(8, above);
+
+      setCoords({ top, left });
+    }
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [anchorRef, open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (popupRef.current?.contains(target)) {
+        return;
+      }
+
+      if (anchorRef.current?.contains(target)) {
+        return;
+      }
+
+      onClose();
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [anchorRef, onClose, open]);
+
+  if (!open || !coords) {
+    return null;
+  }
+
+  return createPortal(
+    <div
+      ref={popupRef}
+      className="rounded-lg bg-popover shadow-md ring-1 ring-foreground/10"
+      style={{
+        position: "fixed",
+        top: coords.top,
+        left: coords.left,
+        zIndex: 200,
+        pointerEvents: "auto",
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <Calendar
+        mode="single"
+        selected={selected}
+        onSelect={(nextDate) => {
+          if (!nextDate) {
+            return;
+          }
+
+          onSelect(nextDate);
+        }}
+      />
+    </div>,
+    document.body,
+  );
+}
+
 export function LogGameForm({
   open,
   onOpenChange,
@@ -223,7 +335,7 @@ export function LogGameForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const playersTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const dateFieldRef = useRef<HTMLDivElement>(null);
+  const dateButtonRef = useRef<HTMLButtonElement>(null);
   const skipPlayersKeyUpRef = useRef(false);
   const isEditing = Boolean(game);
 
@@ -330,6 +442,7 @@ export function LogGameForm({
     setPlayerHighlight(0);
     setError(null);
     setLocationHighlight(0);
+    setDateOpen(false);
   }
 
   useEffect(() => {
@@ -353,25 +466,8 @@ export function LogGameForm({
     setPlayerHighlight(0);
     setError(null);
     setLocationHighlight(0);
+    setDateOpen(false);
   }, [game, open, today]);
-
-  useEffect(() => {
-    if (!dateOpen) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (
-        dateFieldRef.current &&
-        !dateFieldRef.current.contains(event.target as Node)
-      ) {
-        setDateOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [dateOpen]);
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
@@ -486,10 +582,14 @@ export function LogGameForm({
     locationQuery.trim().length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      disablePointerDismissal={dateOpen}
+    >
       <DialogContent
         showCloseButton={false}
-        className="top-8! flex max-h-[min(100dvh-2rem,640px)] translate-y-0! flex-col gap-0 overflow-hidden rounded-sm p-0 sm:max-w-lg"
+        className="top-8! right-4! left-4! mx-auto! flex! w-full max-h-[min(100dvh-2rem,640px)] translate-x-0! translate-y-0! flex-col gap-0 overflow-hidden rounded-sm p-0 sm:max-w-lg"
       >
         <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit}>
           <DialogHeader className="shrink-0 border-b px-2.5 py-2">
@@ -531,35 +631,28 @@ export function LogGameForm({
                 <Label htmlFor="game-date" className="text-[12px]">
                   Date
                 </Label>
-                <div className="relative" ref={dateFieldRef}>
-                  <Button
-                    id="game-date"
-                    type="button"
-                    variant="outline"
-                    aria-expanded={dateOpen}
-                    className="h-7 w-full justify-start px-2 text-[12px] font-normal"
-                    onClick={() => setDateOpen((current) => !current)}
-                  >
-                    <CalendarIcon className="size-3.5 shrink-0" />
-                    <span className="tabular-nums">{formatDisplayDate(date)}</span>
-                  </Button>
-                  {dateOpen ? (
-                    <div className="absolute top-full left-0 z-50 mt-1 rounded-lg bg-popover p-0 shadow-md ring-1 ring-foreground/10">
-                      <Calendar
-                        mode="single"
-                        selected={date ? new Date(`${date}T12:00:00`) : undefined}
-                        onSelect={(nextDate) => {
-                          if (!nextDate) {
-                            return;
-                          }
-
-                          setDate(toIsoDate(nextDate));
-                          setDateOpen(false);
-                        }}
-                      />
-                    </div>
-                  ) : null}
-                </div>
+                <Button
+                  ref={dateButtonRef}
+                  id="game-date"
+                  type="button"
+                  variant="outline"
+                  aria-expanded={dateOpen}
+                  className="h-7 w-full justify-start px-2 text-[12px] font-normal"
+                  onClick={() => setDateOpen((current) => !current)}
+                >
+                  <CalendarIcon className="size-3.5 shrink-0" />
+                  <span className="tabular-nums">{formatDisplayDate(date)}</span>
+                </Button>
+                <DatePickerOverlay
+                  open={dateOpen}
+                  anchorRef={dateButtonRef}
+                  selected={date ? new Date(`${date}T12:00:00`) : undefined}
+                  onSelect={(nextDate) => {
+                    setDate(toIsoDate(nextDate));
+                    setDateOpen(false);
+                  }}
+                  onClose={() => setDateOpen(false)}
+                />
               </div>
 
               <div className="space-y-1">
@@ -711,7 +804,7 @@ export function LogGameForm({
                     }
                   }}
                   placeholder="Trent 143 Luke 182 Jake 124"
-                  className="min-h-24 py-1.5 font-mono text-[12px] leading-5 field-sizing-fixed"
+                  className="min-h-24 py-1.5 text-[12px] leading-5 field-sizing-fixed"
                   style={{ fieldSizing: "fixed" }}
                   autoCapitalize="words"
                   autoCorrect="off"

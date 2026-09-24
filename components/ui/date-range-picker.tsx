@@ -163,17 +163,17 @@ function DateField({ label, value, onCommit }: DateFieldProps) {
   }
 
   return (
-    <label className="flex min-w-0 w-full items-center gap-2 text-xs">
-      <span className="w-9 shrink-0 text-muted-foreground">{label}</span>
+    <label className="flex min-w-0 flex-1 flex-col gap-1">
+      <span className="text-[11px] text-muted-foreground">{label}</span>
       <Input
         type="text"
         inputMode="numeric"
-        placeholder="MM/DD/YYYY"
+        placeholder="Any"
         value={display}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onChange={(event) => setDraft(event.target.value)}
-        className="h-7 min-w-0 flex-1 rounded-sm px-2 text-xs tabular-nums"
+        className="h-7 min-w-0 rounded-md px-2 text-xs tabular-nums placeholder:text-muted-foreground/70"
       />
     </label>
   );
@@ -229,7 +229,7 @@ export function DateRangePicker({ from, to, onChange }: Props) {
         collisionAvoidance={{ side: "flip", align: "shift" }}
         className="w-[min(19.5rem,calc(100vw-2rem))] gap-0 p-0"
       >
-        <div className="flex flex-col gap-2.5 border-b px-2.5 py-2">
+        <div className="flex gap-2 border-b px-2.5 py-2">
           <DateField
             label="From"
             value={draft.from}
